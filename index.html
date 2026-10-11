@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Party Passport</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--navy:#12294a;--gold:#d8b45e;--paper:#e9f0f2;--ink:#14213a;--mute:#5a6a85;--line:#b9c8d3;--red:#c0392b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*:before,*:after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--navy);color:var(--gold);font-family:"Bricolage Grotesque",system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.4}
+main{max-width:520px;margin:0 auto;padding:22px 16px 48px}
+.cover{text-align:center;border:2px solid var(--gold);border-radius:14px;padding:18px 12px;margin-bottom:18px;outline:1px solid var(--gold);outline-offset:-8px}
+.cover h1{margin:6px 0 2px;font-size:1.9rem;letter-spacing:.14em;text-transform:uppercase;font-weight:800}
+.cover p{margin:0;font-family:"IBM Plex Mono",monospace;font-size:.78rem;color:#f1e3b8}
+.panel{background:var(--paper);color:var(--ink);border-radius:12px;padding:16px;margin-bottom:14px}
+.panel h2{margin:0 0 4px;font-size:1.1rem}
+label{display:block;font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--mute);margin:10px 0 3px}
+input[type=text],input[type=number]{width:100%;font:inherit;padding:10px 11px;border:2px solid var(--line);border-radius:8px;color:var(--ink);background:#fff}
+input[type=file]{width:100%;font:inherit;font-size:.9rem}
+input:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:inherit;font-weight:800;border:0;border-radius:8px;padding:12px 16px;cursor:pointer;background:var(--navy);color:var(--gold)}
+button.main{width:100%;margin-top:16px;font-size:1.02rem;background:var(--gold);color:var(--navy)}
+button.ghost{background:transparent;color:var(--mute);padding:6px 0;font-weight:500;text-decoration:underline}
+.guest{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.qr{flex:none;width:210px;height:210px;padding:6px;background:#fff;border:2px solid var(--line);border-radius:8px}
+.qr img,.qr canvas{width:100%!important;height:100%!important;display:block}
+.thumb{width:44px;height:56px;object-fit:cover;border-radius:4px;border:1px solid var(--line);background:#fff;margin-bottom:4px}
+.guest h3{margin:0;font-size:1.1rem}
+.guest p{margin:0 0 4px;color:var(--mute);font-size:.88rem}
+.hint{font-size:.82rem;color:var(--mute);margin:6px 0 0}
+.note{color:#f1e3b8;font-size:.9rem;margin:8px 2px}
+.err{color:var(--red);font-size:.88rem;margin-top:8px}
+.pp{position:relative;overflow:hidden}
+.pp .top{display:flex;justify-content:space-between;font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--mute);border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:12px}
+.pp .id{display:flex;gap:14px}
+.pp .photo{flex:none;width:112px;height:144px;object-fit:cover;border:2px solid var(--line);background:#fff;border-radius:4px}
+.pp .nm{font-size:1.9rem;font-weight:800;line-height:1.05;margin:2px 0 8px;word-break:break-word}
+.f{margin:0 0 8px}
+.f .k{display:block;font-family:"IBM Plex Mono",monospace;font-size:.66rem;color:var(--mute)}
+.f .v{display:block;font-size:1.02rem;font-weight:500;word-break:break-word}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 14px;margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.grid .wide{grid-column:1/-1}
+.mrz{font-family:"IBM Plex Mono",monospace;font-size:.7rem;letter-spacing:.04em;color:var(--ink);margin-top:14px;padding-top:10px;border-top:1px dashed var(--line);overflow:hidden;white-space:nowrap}
+.stamp{position:absolute;right:10px;top:52px;transform:rotate(-14deg);border:3px solid var(--red);color:var(--red);border-radius:8px;padding:4px 10px;font-weight:800;text-align:center;letter-spacing:.08em;background:rgba(255,255,255,.55)}
+.stamp small{display:block;font-family:"IBM Plex Mono",monospace;font-size:.7rem;letter-spacing:0}
+a.back{color:var(--gold)}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+const app=document.getElementById('app');
+const FIELDS=[['country','Country',30],['state','State',30],['city','City',30],['address','Address',70],['mother',"Mother's name",30],['father',"Father's name",30],['siblings','Sibling names',40],['school','School name',40],['age','Age',3],['food','Favorite food',30],['drink','Favorite drink',30],['color','Favorite color',20],['show','Favorite show',30]];
+let link='';
+const b64=s=>btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const dec=s=>JSON.parse(decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/')))));
+const pack=g=>b64(JSON.stringify([g.name||''].concat(FIELDS.map(f=>g[f[0]]||''))));
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+const baseUrl=()=>(link||location.href.split('#')[0]);
+const newId=()=>Math.random().toString(36).slice(2,10);
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function cover(sub){const c=el('div','cover');c.append(el('div',null,'✈'),el('h1',null,'Party Passport'),el('p',null,sub));return c}
+const readPhoto=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const s=Math.min(1,260/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.72))};img.onerror=rej;img.src=r.result};r.onerror=rej;r.readAsDataURL(f)});
+
+function showHost(){
+  app.innerHTML='';
+  app.append(cover('Boarding passes for the guest list'));
+  if(location.protocol==='file:')app.append(el('p','note','Upload this site online first. QR codes made from a local file will not open on other phones.'));
+  const form=el('div','panel');
+  let h='<h2>New passport</h2><label for="n">Full name</label><input type="text" id="n" maxlength="40" autocomplete="off"><label for="ph">Photo (shows only on this phone)</label><input type="file" id="ph" accept="image/*">';
+  FIELDS.forEach(f=>{h+='<label for="f_'+f[0]+'">'+f[1]+'</label><input type="text" id="f_'+f[0]+'" maxlength="'+f[2]+'" autocomplete="off">'});
+  form.innerHTML=h+'<button class="main" id="add">Issue passport</button><div class="err" id="err"></div>';
+  app.append(form);
+  const list=el('div');app.append(list);
+  let guests=ls.get('guests',[]);
+  const q=s=>form.querySelector(s);
+  q('#add').onclick=async()=>{
+    const err=q('#err');err.textContent='';
+    const name=q('#n').value.trim();
+    if(!name){q('#n').focus();return}
+    const d={id:newId(),name};FIELDS.forEach(f=>{d[f[0]]=q('#f_'+f[0]).value.trim()});
+    try{const file=q('#ph').files[0];if(file)d.photo=await readPhoto(file)}catch(e){}
+    guests.push(d);
+    if(!ls.set('guests',guests)){guests.pop();err.textContent='Could not save. Browser storage is full or blocked.';return}
+    q('#n').value='';q('#ph').value='';FIELDS.forEach(f=>{q('#f_'+f[0]).value=''});draw();
+  };
+  function draw(){
+    list.innerHTML='';
+    guests.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(g=>{
+      const card=el('div','panel guest');
+      const qr=el('div','qr'),body=el('div');
+      if(g.photo){const im=el('img','thumb');im.src=g.photo;im.alt='';body.append(im)}
+      body.append(el('h3',null,g.name),el('p',null,[g.city,g.country].filter(Boolean).join(', ')||'No location'));
+      const del=el('button','ghost','Remove');
+      del.onclick=()=>{guests=guests.filter(x=>x.id!==g.id);ls.set('guests',guests);draw()};
+      body.append(del);card.append(qr,body);list.append(card);
+      try{new QRCode(qr,{text:baseUrl()+'#'+g.id+'~'+pack(g),width:420,height:420,correctLevel:QRCode.CorrectLevel.L})}catch(e){qr.textContent='QR failed'}
+    });
+    if(guests.length)list.append(el('p','note','Press and hold a QR code to save or share it, or screenshot it and send it to your friend. Your guest list is saved in this browser only.'));
+  }
+  draw();
+}
+
+function showCard(raw){
+  app.innerHTML='';
+  app.append(cover('Passport check'));
+  const parts=raw.split('~'),id=parts[0],pl=parts[1];
+  const back=el('a','back','Back to guest list');back.href='#';back.onclick=e=>{e.preventDefault();location.hash=''};
+  let g=null;
+  if(pl){try{const a=dec(pl);g={name:a[0]};FIELDS.forEach((f,i)=>{if(a[i+1])g[f[0]]=a[i+1]})}catch(e){g=null}}
+  const loc=ls.get('guests',[]).find(x=>x.id===id);
+  if(loc)g=Object.assign(g||{},loc);
+  if(!g){app.append(el('p','note','Passport not found. Check that this QR code is from your guest list.'));return}
+  const arr=ls.get('arr',{});
+  const p=el('div','panel pp');
+  const top=el('div','top');top.append(el('span',null,'PASSPORT / PASSEPORT'),el('span',null,'PARTY'));p.append(top);
+  const idr=el('div','id');
+  const ph=el('img','photo');ph.alt='';
+  ph.src=g.photo||'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="112" height="144"><rect width="112" height="144" fill="#dfe7ec"/><circle cx="56" cy="56" r="22" fill="#b9c8d3"/><rect x="22" y="88" width="68" height="40" rx="20" fill="#b9c8d3"/></svg>');
+  const info=el('div');
+  info.append(el('div','nm',g.name||''));
+  [['country','Country'],['state','State'],['city','City']].forEach(k=>{if(g[k[0]]){const f=el('div','f');f.append(el('span','k',k[1]),el('span','v',g[k[0]]));info.append(f)}});
+  idr.append(ph,info);p.append(idr);
+  const grid=el('div','grid');
+  FIELDS.slice(3).forEach(k=>{if(!g[k[0]])return;const f=el('div','f'+(k[0]==='address'?' wide':''));f.append(el('span','k',k[1]),el('span','v',g[k[0]]));grid.append(f)});
+  p.append(grid);
+  const up=t=>(t||'').toUpperCase().replace(/[^A-Z0-9 ]/g,'').replace(/ +/g,'<');
+  const pad=t=>(t+'<'.repeat(36)).slice(0,36);
+  p.append(el('div','mrz',pad('P<PTY<<'+up(g.name))));
+  p.append(el('div','mrz',pad(id.slice(0,9).toUpperCase()+'<'+up(g.country).slice(0,3)+(g.age||'')+'<<<')));
+  const st=el('div');p.append(st);
+  function paint(){
+    st.innerHTML='';p.querySelectorAll('.stamp').forEach(x=>x.remove());
+    if(arr[id]){const x=el('div','stamp','ARRIVED');x.append(el('small',null,arr[id]));p.append(x)}
+    else{const b=el('button','main','Stamp arrival');b.onclick=()=>{arr[id]=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});ls.set('arr',arr);paint()};st.append(b)}
+  }
+  paint();
+  app.append(p);
+  if(loc)app.append(back);
+}
+
+function route(){const id=location.hash.replace('#','');id?showCard(id):showHost()}
+window.addEventListener('hashchange',route);
+route();
+</script>
+</body>
+</html>
